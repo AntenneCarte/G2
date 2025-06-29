@@ -2,361 +2,54 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Graphiques Antennes</title>
-  <!-- Include Chart.js and plugins only once, if not already included in your other HTML -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <title>Carte des Antennes 3G Disparues</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
-    /* Unique class names to avoid conflicts */
-    .antenna-charts-wrapper {
-      display: flex;
-      justify-content: center;
-      margin: 10px auto;
-      max-width: 600px;
-    }
-
-    .antenna-chart-container {
-      width: 100%;
-      max-width: 600px;
-      padding: 5px;
-      box-sizing: border-box;
-    }
-
-    #antenna-chart-canvas {
-      width: 100% !important;
-      height: 400px !important;
-      display: block;
-    }
-
-    #antenna-controls {
-      position: relative;
-      background: white;
-      padding: 10px;
-      margin: 10px auto;
-      max-width: 600px;
-      border-radius: 4px;
-      box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
-      font-family: Arial, sans-serif;
-      font-size: 12px;
-      display: flex;
-      flex-direction: row;
-      gap: 20px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .antenna-filter-group {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .antenna-group-label {
-      font-weight: bold;
-      white-space: nowrap;
-    }
-
-    .antenna-button-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-    }
-
-    .antenna-filter-button {
-      background: #f0f0f0;
-      border: 1px solid #ccc;
-      border-radius: 3px;
-      padding: 5px 10px;
-      cursor: pointer;
-      font-size: 12px;
-      transition: background 0.2s;
-    }
-
-    .antenna-filter-button.active {
-      background: #007bff;
-      color: white;
-      border-color: #007bff;
-    }
-
-    .antenna-filter-button:hover {
-      background: #e0e0e0;
-    }
-
-    .antenna-filter-button.active:hover {
-      background: #0056b3;
-    }
+    #map { height: 100vh; width: 100vw; }
   </style>
 </head>
 <body>
-  <!-- Your other HTML content goes here -->
-  <!-- Example placeholder for other content -->
-  <!-- <div id="other-content">Your other HTML code...</div> -->
-
-  <!-- Antenna chart section -->
-  <div id="antenna-controls">
-    <div class="antenna-filter-group">
-      <span class="antenna-group-label">Technology:</span>
-      <div class="antenna-button-group">
-        <button class="antenna-filter-button active" data-type="tech" data-value="5G">5G</button>
-        <button class="antenna-filter-button" data-type="tech" data-value="4G">4G</button>
-        <button class="antenna-filter-button" data-type="tech" data-value="3G">3G</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="antenna-charts-wrapper">
-    <div class="antenna-chart-container">
-      <canvas id="antenna-chart-canvas"></canvas>
-    </div>
-  </div>
-
+  <div id="map"></div>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Wrap script in an IIFE to avoid global scope conflicts
-    (function() {
-      // Wait for DOM to load
-      document.addEventListener('DOMContentLoaded', function() {
-        try {
-          // Register Chart.js plugins
-          Chart.register(ChartDataLabels);
-          Chart.register(window['chartjs-plugin-annotation']);
-          console.log("Antenna chart: Chart.js and plugins registered successfully");
-        } catch (err) {
-          console.error("Antenna chart: Error registering Chart.js plugins:", err);
-          return;
-        }
+    // Initialiser la carte centrée sur la Suisse
+    var map = L.map('map').setView([46.8, 8.2], 8);
 
-        const geojsonURLs = {
-          Sunrise: {
-            "3G": 'https://raw.githubusercontent.com/AntenneCarte/1/main/Sunrise_3G.geojson',
-            "4G": 'https://raw.githubusercontent.com/AntenneCarte/1/main/Sunrise_4G.geojson',
-            "5G": 'https://raw.githubusercontent.com/AntenneCarte/1/main/Sunrise_5G.geojson'
+    // Ajouter un fond de carte OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Charger le fichier GeoJSON
+    fetch('https://raw.githubusercontent.com/AntenneCarte/G2/refs/heads/main/Ant3G.json')
+      .then(response => response.json())
+      .then(data => {
+        // Ajouter les antennes sur la carte
+        L.geoJSON(data, {
+          pointToLayer: function (feature, latlng) {
+            return L.marker(latlng);
           },
-          Salt: {
-            "3G": 'https://raw.githubusercontent.com/AntenneCarte/1/main/Salt_3G.geojson',
-            "4G": 'https://raw.githubusercontent.com/AntenneCarte/1/main/Salt_4G.geojson',
-            "5G": 'https://raw.githubusercontent.com/AntenneCarte/1/main/Salt_5G.geojson'
-          },
-          Swisscom: {
-            "3G": 'https://raw.githubusercontent.com/AntenneCarte/1/main/Swisscom_3G.geojson',
-            "4G": 'https://raw.githubusercontent.com/AntenneCarte/1/main/Swisscom_4G.geojson',
-            "5G": 'https://raw.githubusercontent.com/AntenneCarte/1/main/Swisscom_5G.geojson'
+          onEachFeature: function (feature, layer) {
+            var props = feature.properties;
+            var popupContent = `
+              <b>Station :</b> ${props.station || ''}<br>
+              <b>Type :</b> ${props.typ_fr || ''}<br>
+              <b>Puissance :</b> ${props.power_fr || ''}<br>
+              <b>Technologie :</b> ${props.techno_fr || ''}<br>
+              <b>Adaptatif :</b> ${props.adaptiv_fr || ''}<br>
+              <b>Autorisation :</b> ${props.bewilligung_fr || ''}<br>
+              <b>Valeur limite :</b> ${props.agw_fr || ''}
+            `;
+            layer.bindPopup(popupContent);
           }
-        };
-
-        const freqLabels = ["700 MHz", "800 MHz", "900 MHz", "1400 MHz", "1800 MHz", "2100 MHz", "2600 MHz", "3500 MHz"];
-        const operators = ["Sunrise", "Salt", "Swisscom"];
-        const technologies = ["3G", "4G", "5G"];
-
-        const operatorColors = {
-          Sunrise: 'rgba(255, 0, 0, 0.6)',
-          Salt: 'rgba(0, 128, 0, 0.6)',
-          Swisscom: 'rgba(0, 0, 255, 0.6)'
-        };
-
-        let currentTechnology = "5G";
-        let chart1 = null;
-
-        async function loadData(technology) {
-          const operatorData = {
-            Sunrise: [0, 0, 0, 0, 0, 0, 0, 0],
-            Salt: [0, 0, 0, 0, 0, 0, 0, 0],
-            Swisscom: [0, 0, 0, 0, 0, 0, 0, 0]
-          };
-
-          for (const operator in geojsonURLs) {
-            const url = geojsonURLs[operator][technology];
-            try {
-              const res = await fetch(url);
-              if (!res.ok) {
-                throw new Error(`HTTP error! Status: ${res.status} for URL: ${url}`);
-              }
-              const data = await res.json();
-              if (!data.features) {
-                throw new Error(`Invalid GeoJSON data for ${operator} ${technology}`);
-              }
-              data.features.forEach(feature => {
-                if (feature.geometry && feature.geometry.type === "Point") {
-                  const props = feature.properties || {};
-                  const freqStr = props["frequency (MHz)"] || "0 MHz";
-                  const freq = parseFloat(freqStr.replace(/[^\d.]/g, '')) || 0;
-                  const group = getFrequencyGroup(freq);
-                  operatorData[operator][group]++;
-                }
-              });
-            } catch (err) {
-              console.error(`Antenna chart: Error loading data for ${operator} ${technology} from ${url}:`, err.message);
-            }
-          }
-
-          return operatorData;
-        }
-
-        function getFrequencyGroup(freq) {
-          if (freq < 791) return 0; // 700 MHz
-          else if (freq < 900) return 1; // 800 MHz
-          else if (freq < 1000) return 2; // 900 MHz
-          else if (freq < 1500) return 3; // 1400 MHz
-          else if (freq < 1900) return 4; // 1800 MHz
-          else if (freq < 2300) return 5; // 2100 MHz
-          else if (freq < 2700) return 6; // 2600 MHz
-          else return 7; // 3500 MHz
-        }
-
-        function renderChart(data) {
-          if (chart1) {
-            try {
-              chart1.destroy();
-              console.log("Antenna chart: Previous chart destroyed");
-            } catch (err) {
-              console.error("Antenna chart: Error destroying previous chart:", err);
-            }
-          }
-
-          const ctx1 = document.getElementById("antenna-chart-canvas")?.getContext("2d");
-          if (!ctx1) {
-            console.error("Antenna chart: Canvas context for antenna-chart-canvas not found");
-            return;
-          }
-
-          const datasets1 = operators.map(operator => ({
-            label: operator,
-            data: data[operator],
-            backgroundColor: operatorColors[operator],
-            borderColor: operatorColors[operator],
-            borderWidth: 1
-          }));
-
-          try {
-            chart1 = new Chart(ctx1, {
-              type: 'bar',
-              data: {
-                labels: freqLabels,
-                datasets: datasets1
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: true },
-                  datalabels: {
-                    anchor: 'end',
-                    align: 'top',
-                    formatter: (value) => value > 0 ? value : ''
-                  },
-                  annotation: {
-                    annotations: [
-                      {
-                        type: 'line',
-                        xMin: 0.5,
-                        xMax: 0.5,
-                        borderColor: 'rgba(0, 123, 255, 0.4)',
-                        borderWidth: 1.5,
-                        borderDash: [5, 5]
-                      },
-                      {
-                        type: 'line',
-                        xMin: 1.5,
-                        xMax: 1.5,
-                        borderColor: 'rgba(0, 123, 255, 0.4)',
-                        borderWidth: 1.5,
-                        borderDash: [5, 5]
-                      },
-                      {
-                        type: 'line',
-                        xMin: 2.5,
-                        xMax: 2.5,
-                        borderColor: 'rgba(0, 123, 255, 0.4)',
-                        borderWidth: 1.5,
-                        borderDash: [5, 5]
-                      },
-                      {
-                        type: 'line',
-                        xMin: 3.5,
-                        xMax: 3.5,
-                        borderColor: 'rgba(0, 123, 255, 0.4)',
-                        borderWidth: 1.5,
-                        borderDash: [5, 5]
-                      },
-                      {
-                        type: 'line',
-                        xMin: 4.5,
-                        xMax: 4.5,
-                        borderColor: 'rgba(0, 123, 255, 0.4)',
-                        borderWidth: 1.5,
-                        borderDash: [5, 5]
-                      },
-                      {
-                        type: 'line',
-                        xMin: 5.5,
-                        xMax: 5.5,
-                        borderColor: 'rgba(0, 123, 255, 0.4)',
-                        borderWidth: 1.5,
-                        borderDash: [5, 5]
-                      },
-                      {
-                        type: 'line',
-                        xMin: 6.5,
-                        xMax: 6.5,
-                        borderColor: 'rgba(0, 123, 255, 0.4)',
-                        borderWidth: 1.5,
-                        borderDash: [5, 5]
-                      }
-                    ]
-                  }
-                },
-                scales: {
-                  x: { beginAtZero: true },
-                  y: { beginAtZero: true }
-                }
-              }
-            });
-            console.log("Antenna chart: Chart rendered successfully");
-          } catch (err) {
-            console.error("Antenna chart: Error rendering chart:", err);
-          }
-        }
-
-        function updateButtonStyles(type, value) {
-          try {
-            document.querySelectorAll(`.antenna-filter-button[data-type="${type}"]`).forEach(btn => {
-              btn.classList.toggle('active', btn.dataset.value === value);
-            });
-          } catch (err) {
-            console.error("Antenna chart: Error updating button styles:", err);
-          }
-        }
-
-        document.querySelectorAll('.antenna-filter-button[data-type="tech"]').forEach(btn => {
-          btn.addEventListener('click', function() {
-            try {
-              currentTechnology = this.dataset.value;
-              updateButtonStyles('tech', currentTechnology);
-              loadData(currentTechnology).then(data => {
-                console.log(`Antenna chart: Data loaded for ${currentTechnology}:`, data);
-                renderChart(data);
-              }).catch(err => console.error(`Antenna chart: Error loading data for ${currentTechnology}:`, err));
-            } catch (err) {
-              console.error("Antenna chart: Error in button click handler:", err);
-            }
-          });
-        });
-
-        // Initial load
-        try {
-          loadData(currentTechnology).then(data => {
-            console.log(`Antenna chart: Initial data loaded for ${currentTechnology}:`, data);
-            renderChart(data);
-          }).catch(err => console.error("Antenna chart: Error during initial data load:", err));
-        } catch (err) {
-          console.error("Antenna chart: Error in initial load:", err);
-        }
+        }).addTo(map);
+      })
+      .catch(error => {
+        alert('Erreur lors du chargement des données GeoJSON : ' + error);
       });
-    })();
   </script>
-
-  <!-- Your other scripts or HTML content go here -->
 </body>
 </html>
