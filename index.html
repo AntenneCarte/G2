@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>Carte des Antennes 3G Disparues</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
     #map { height: 100vh; width: 100vw; }
@@ -12,25 +11,27 @@
 </head>
 <body>
   <div id="map"></div>
-  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Initialiser la carte centrée sur la Suisse
     var map = L.map('map').setView([46.8, 8.2], 8);
 
-    // Ajouter un fond de carte OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    // Charger le fichier GeoJSON
     fetch('https://raw.githubusercontent.com/AntenneCarte/G2/refs/heads/main/Ant3G.json')
       .then(response => response.json())
       .then(data => {
-        // Ajouter les antennes sur la carte
         L.geoJSON(data, {
           pointToLayer: function (feature, latlng) {
-            return L.marker(latlng);
+            // Création d'un cercle rouge pour chaque antenne
+            return L.circleMarker(latlng, {
+              radius: 7,
+              color: '#b30000',
+              fillColor: '#ff3333',
+              fillOpacity: 0.85,
+              weight: 2
+            });
           },
           onEachFeature: function (feature, layer) {
             var props = feature.properties;
