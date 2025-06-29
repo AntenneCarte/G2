@@ -24,12 +24,12 @@
       .then(data => {
         L.geoJSON(data, {
           pointToLayer: function (feature, latlng) {
-            // Création d'un cercle rouge pour chaque antenne
+            // Affiche un cercle rouge à la place d'un marker
             return L.circleMarker(latlng, {
-              radius: 7,
-              color: '#b30000',
-              fillColor: '#ff3333',
-              fillOpacity: 0.85,
+              radius: 8,
+              color: '#c00',
+              fillColor: '#f33',
+              fillOpacity: 0.9,
               weight: 2
             });
           },
