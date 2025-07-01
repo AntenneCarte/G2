@@ -1,56 +1,140 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Carte des Antennes 3G Disparues</title>
+  <meta charset="utf-8" />
+  <title>Carte Antennes Suisse 3G</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    #map { height: 100vh; width: 100vw; }
+    html, body { height: 100%; margin: 0; }
+    #map { width: 100vw; height: 100vh; }
+    .update-label {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      background: rgba(255,255,255,0.9);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 1.1em;
+      font-family: Arial, sans-serif;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      min-width: 180px;
+    }
+    .legend {
+      margin-top: 10px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 1em;
+    }
+    .legend-circle {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 1.5px solid #999;
+    }
+    .legend-green { background: #2ecc40; border-color: #1e7e34; }
+    .legend-red { background: #ff4136; border-color: #b71c1c; }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <div class="update-label" id="updateLabel"></div>
+
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    var map = L.map('map').setView([46.8, 8.2], 8);
+    // Détection de la langue
+    const userLang = navigator.language || navigator.userLanguage;
+    const isFrench = userLang.startsWith('fr');
+    const texts = isFrench
+      ? {
+          updated: "Actualisé le 01.07.2025",
+          active: "3G active",
+          inactive: "3G désactivée"
+        }
+      : {
+          updated: "Aktualisiert am 01.07.2025",
+          active: "3G aktiv",
+          inactive: "3G deaktiviert"
+        };
 
+    // Générer la légende HTML
+    document.getElementById('updateLabel').innerHTML =
+      `<div>${texts.updated}</div>
+       <div class="legend">
+         <div class="legend-item">
+           <span class="legend-circle legend-green"></span> ${texts.active}
+         </div>
+         <div class="legend-item">
+           <span class="legend-circle legend-red"></span> ${texts.inactive}
+         </div>
+       </div>`;
+
+    // Initialisation de la carte
+    const map = L.map('map').setView([46.8, 8.3], 8); // Centré sur la Suisse
+
+    // Fond de carte OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    fetch('https://raw.githubusercontent.com/AntenneCarte/G2/refs/heads/main/Ant3G.json')
-      .then(response => response.json())
-      .then(data => {
-        L.geoJSON(data, {
-          pointToLayer: function (feature, latlng) {
-            // Affiche un cercle rouge à la place d'un marker
-            return L.circleMarker(latlng, {
-              radius: 8,
-              color: '#c00',
-              fillColor: '#f33',
-              fillOpacity: 0.9,
-              weight: 2
-            });
-          },
-          onEachFeature: function (feature, layer) {
-            var props = feature.properties;
-            var popupContent = `
-              <b>Station :</b> ${props.station || ''}<br>
-              <b>Type :</b> ${props.typ_fr || ''}<br>
-              <b>Puissance :</b> ${props.power_fr || ''}<br>
-              <b>Technologie :</b> ${props.techno_fr || ''}<br>
-              <b>Adaptatif :</b> ${props.adaptiv_fr || ''}<br>
-              <b>Autorisation :</b> ${props.bewilligung_fr || ''}<br>
-              <b>Valeur limite :</b> ${props.agw_fr || ''}
-            `;
-            layer.bindPopup(popupContent);
-          }
-        }).addTo(map);
-      })
-      .catch(error => {
-        alert('Erreur lors du chargement des données GeoJSON : ' + error);
-      });
+    // Style pour les antennes
+    function styleAntTout(feature) {
+      return {
+        radius: 7,
+        fillColor: "#2ecc40", // vert
+        color: "#1e7e34",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+      };
+    }
+    function styleAnt3G(feature) {
+      return {
+        radius: 7,
+        fillColor: "#ff4136", // rouge
+        color: "#b71c1c",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+      };
+    }
+
+    // Fonction générique pour charger un GeoJSON avec un style donné
+    function addGeoJsonLayer(url, styleFn) {
+      fetch(url)
+        .then(resp => resp.json())
+        .then(data => {
+          L.geoJSON(data, {
+            pointToLayer: function (feature, latlng) {
+              return L.circleMarker(latlng, styleFn(feature));
+            },
+            onEachFeature: function (feature, layer) {
+              layer.on('click', function(e) {
+                e.originalEvent.preventDefault();
+                e.originalEvent.stopPropagation();
+              });
+            }
+          }).addTo(map);
+        })
+        .catch(err => {
+          console.error('Erreur lors du chargement de', url, err);
+        });
+    }
+
+    // Charger les deux couches depuis GitHub
+    addGeoJsonLayer('https://raw.githubusercontent.com/AntenneCarte/G2/refs/heads/main/Ant_tout.json', styleAntTout);
+    addGeoJsonLayer('https://raw.githubusercontent.com/AntenneCarte/G2/refs/heads/main/Ant3G.json', styleAnt3G);
   </script>
 </body>
 </html>
